@@ -211,8 +211,10 @@ public class SpecialProcessor {
                         // 当文件传输完毕后，源节点的业务流程就已经全部结束了
                         outToCollector.writeUTF(JSON.toJSONString(srcDiskBean.getLogicalDrives()));
                         outToCollector.writeUTF(JSON.toJSONString(srcDiskBean));
+                        outToCollector.writeBoolean(true);
                     }
                     else if(choice==2){
+                        //作为接受节点
                         String physicalDiskListJson=DiskChecker.diskCheck();
                         JSONArray jsonArray = JSON.parseArray(physicalDiskListJson);
                         List<PhysicalDiskBean> physicalDiskList = new ArrayList<>();
@@ -269,32 +271,29 @@ public class SpecialProcessor {
                             dstLDiskList.add(lDiskBean);
                         }
                         dstDiskBean.setLogicalDrives(dstLDiskList);
-
                         // 在目的硬盘上进行分区，此步骤会格式化目的硬盘导致数据丢失，须谨慎操作
                         DiskPartition.diskPartition(JSON.toJSONString(dstDiskBean));
-
-
                         in.nextLine();
                         // 这一步在 web端完成，先于源节点的传输请求启动
-                        System.out.println("====> 请输入 IP:");
+                        //System.out.println("====> 请输入 IP:");
                         String serverIP ="127.0.0.1";
-                        System.out.println("====> 请输入 端口:");
+                        //System.out.println("====> 请输入 端口:");
                         int serverPort = 7060;
                         // 缓冲区的大小必须比源节点的文件片大小大,可以通过算法设置不必用户输入
-                        System.out.println("====> 请输入缓冲区大小 默认20 单位:M:");
+                        //System.out.println("====> 请输入缓冲区大小 默认20 单位:M:");
                         int fileShardSize = 20;
-                        System.out.println("====> 请输文件保存位置（盘符 / 根目录）");
+                        //System.out.println("====> 请输文件保存位置（盘符 / 根目录）");
                         String fileSavePath ="/";
                         ServerManager serverManager = new ServerManager(serverIP, serverPort, fileShardSize, fileSavePath);
                         serverManager.serverStart();
 
 
-                        System.out.println("########### 硬盘镜像文件将解压到 ###########");
+                        //System.out.println("########### 硬盘镜像文件将解压到 ###########");
                         System.out.println(dstDiskBean.toString());
 
                         // 这里存在一个映射关系，因为源硬盘分区与目的硬盘分区的盘符不一样
                         // 不过在分区的时候这个映射关系已经确定了
-                        System.out.println("########### 分区映射关系如下所示 ###########");
+                        //System.out.println("########### 分区映射关系如下所示 ###########");
                         String srcLDiskBeanLogicalDrives =inFromCollector.readUTF();
                         String srcDiskBeanJson=inFromCollector.readUTF();
                         JSONArray srcDiskBeans=JSON.parseArray(srcLDiskBeanLogicalDrives);
@@ -304,6 +303,7 @@ public class SpecialProcessor {
                         }
                         DiskRecover.diskRecover(srcDiskBeanJson, JSON.toJSONString(dstDiskBean),
                                 "E:\\dataescape_recv_tmp\\fa6641458842b7ec9cb0ddc621cd6b2e.wim");
+                        outToCollector.writeBoolean(true);
                     }
                 }
             } catch (IOException e) {

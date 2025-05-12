@@ -7,3 +7,4 @@
 5.检查被监控节点依赖是否完全
 	smartmontools
 	sysstat
+	iostat

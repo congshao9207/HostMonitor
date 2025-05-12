@@ -462,8 +462,10 @@ public class HybridDataCollectorService implements DataCollectorService{
             mapsMix();
         }
         double totalSumCapacity=0;
-        int windowsCount=0,linuxCount=0,HDDCount=0,SSDCount=0,connectedCount=0;
-        float[][] loadCount = new float[][]{{0,0,0},{0,0,0},{0,0,0}};
+        //int windowsCount=0,linuxCount=0,HDDCount=0,SSDCount=0,connectedCount=0;
+        int windowsCount=0,linuxCount=0,HDDCount=2,SSDCount=2,connectedCount=0;
+        //float[][] loadCount = new float[][]{{0,0,0},{0,0,0},{0,0,0}};
+        float[][] loadCount = new float[][]{{1,2,3},{3,2,1},{4,5,6}};
         JSONArray hostIp=new JSONArray();
         for(Map.Entry<String,JSONObject> hostInfo: hostsSampleData.entrySet()){
             JSONObject hostInfoJson = hostInfo.getValue();

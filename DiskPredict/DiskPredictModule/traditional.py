@@ -25,7 +25,8 @@ from sklearn.model_selection import GridSearchCV, StratifiedKFold, train_test_sp
 from sklearn.feature_selection import SelectFromModel
 from score import Score
 
-root_path = 'E:/Code/HostMonitor/DiskPredict'
+# root_path = 'E:/Code/HostMonitor/DiskPredict'
+root_path = os.path.dirname(os.path.abspath(__file__))
 X_ = 1
 y_ = 0
 index_dict = {

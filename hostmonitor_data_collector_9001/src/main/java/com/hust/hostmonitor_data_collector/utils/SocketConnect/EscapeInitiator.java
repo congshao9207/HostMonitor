@@ -57,21 +57,27 @@ public class EscapeInitiator {
             }
         }
     }
-    public String srcRequest(){
+
+    public String srcDiskLists() {
+            try {
+                outToSrc.writeInt(1);
+                outToSrc.writeInt(1);
+                //接收处理结果
+                String physicalDiskListJson = inFromSrc.readUTF();
+                return physicalDiskListJson;
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        return null;
+    }
+    public String srcRequest(String srcSN,String srcPath){
         try {
-            outToSrc.writeInt(1);
-            outToSrc.writeInt(1);
-            //接收处理结果
-            String physicalDiskListJson=inFromSrc.readUTF();
-            //网页前端返回选择的序列号SN TODO
-            String srcSN=null;
             outToSrc.writeUTF(srcSN);
             long size=inFromSrc.readLong();
             if(size==-1){
                 //TODO 没有找到磁盘
             }
-            //网页前端选定路径，或者直接使用默认路径啊这
-            String srcPath=null;
+            //网页前端选定路径，或者直接使用默认路径啊
             outToSrc.writeUTF(srcPath);
             int compressResult=inFromSrc.readInt();
             if(compressResult==-1){
@@ -83,19 +89,27 @@ public class EscapeInitiator {
             }
             srcDiskBeanLogicalDrives=inFromSrc.readUTF();
             srcDiskBeanJson=inFromSrc.readUTF();
+            inFromSrc.readBoolean();
         } catch (IOException e) {
             e.printStackTrace();
         }
 
         return null;
     }
-    public String dstRequest(){
+
+    public String dstDiskLists() {
         try {
             outToDst.writeInt(1);
             outToDst.writeInt(2);
             String physicalDiskListJson=inFromDst.readUTF();
-            //网页前端返回选择的序列号SN TODO
-            String dstSN=null;
+            return physicalDiskListJson;
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+    public String dstRequest(String dstSN){
+        try {
             outToDst.writeUTF(dstSN);
             long size=inFromDst.readLong();
             if(size==-1){
@@ -106,7 +120,7 @@ public class EscapeInitiator {
             outToDst.writeUTF(srcDiskBeanJson);
 
             //接收处理结果
-
+            inFromDst.readBoolean();
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -135,4 +149,7 @@ public class EscapeInitiator {
         }
 
     }
+
+
+
 }

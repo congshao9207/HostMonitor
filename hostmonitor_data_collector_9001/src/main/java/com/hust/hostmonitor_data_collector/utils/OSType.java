@@ -6,5 +6,6 @@ public enum OSType {
     LINUX,
     SW_DEEPIN,
     VMWARE,
+    RESTFUL,
     ;
 }

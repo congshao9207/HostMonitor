@@ -9,6 +9,7 @@ import com.hust.hostmonitor_data_collector.utils.DiskPredict.DiskPredict;
 import com.hust.hostmonitor_data_collector.utils.SSHConnect.HostConfigData;
 
 import com.hust.hostmonitor_data_collector.utils.SSHConnect.ProxyConfigData;
+import com.hust.hostmonitor_data_collector.utils.SocketConnect.EscapeInitiator;
 import com.hust.hostmonitor_data_collector.utils.linuxsample.Entity.*;
 import com.hust.hostmonitor_data_collector.utils.linuxsample.LinuxDataProcess;
 import com.hust.hostmonitor_data_collector.utils.linuxsample.LinuxGPU;
@@ -47,6 +48,7 @@ public class DataSampleManager {
     //Host 配置信息
     public List<HostConfigData> hostList;
     public final SimpleDateFormat sdf =new SimpleDateFormat("yyyy-MM-dd");
+    //public HashMap<int,long> lastTimeIOinfo;
     //单例
     private volatile static DataSampleManager dataSampleManager;
 
@@ -66,6 +68,7 @@ public class DataSampleManager {
         //使用SSH监控的节点列表
         hostList = configDataManager.getSSHConfigHostList();
         localOSType = OSType.NONE;
+        //lastTimeIOinfo = new HashMap<int,long>();
     }
     //获取OS类型
     private OSType getOSType(HostConfigData hostConfigData){
@@ -619,6 +622,7 @@ public class DataSampleManager {
             //还有候选命令 dstat -n 1 2
             List<String> ifStatResult = cmdExecutor.runCommand("ifstat -T 1 2", hostConfigData,false,0);
             System.out.println(ifStatResult.size());
+            //改成数据读写量变化来计算
             List<String> ioStatResult = cmdExecutor.runCommand("iostat -x 1 2",hostConfigData,false,0);
             System.out.println(ioStatResult.size());
             //取得有效值
@@ -636,8 +640,6 @@ public class DataSampleManager {
                 }
                 ioStatResult=ioStatResult.subList(index,ioStatResult.size());
             }
-
-
             if(sampleInfo.size()==0||mountUsageInfo.size()==0){
                 return;
             }
@@ -1308,6 +1310,8 @@ public class DataSampleManager {
                 sampleData.put("netSendSpeed",LinuxDataProcess.doubleTo2bits_double(record.getNetSend()*1.0f/1024/8));
                 sampleData.put("netReceiveSpeed",LinuxDataProcess.doubleTo2bits_double(record.getNetReceive()*1.0f/1024/8));
             }
+        }else if(osType.equals(OSType.RESTFUL)){
+
         }
         sampleData.put("lastUpdateTime",new Timestamp(System.currentTimeMillis()));
         sampleData.put("connected",true);
@@ -1563,6 +1567,7 @@ public class DataSampleManager {
             for(String currentDiskName: diskList){
                 JSONObject currentDiskData = new JSONObject();
                 {
+                    //TODO、opt
                     List<String> cmdResult = cmdExecutor.runCommand(smartDiskInfoCmd + currentDiskName+postfix,hostConfigData,true,0);
                     if(cmdResult.get(3).contains("Unable to")){
                         continue;
@@ -1756,7 +1761,26 @@ public class DataSampleManager {
             tempObject.put("connected",false);
         }
     }
+    public EscapeInitiator escapeInitiator;
+    public String prepareForEscape(String src,String dst){
+        escapeInitiator=new EscapeInitiator(src,dst);
+        escapeInitiator.srcSocketInitialization();
+        String jsonSrc=escapeInitiator.srcDiskLists();
+        escapeInitiator.dstSocketInitialization();
+        String jsonDst=escapeInitiator.dstDiskLists();
+        JSONObject res=new JSONObject();
+        res.put("src",jsonSrc);
+        res.put("dst",jsonDst);
+        return res.toJSONString();
+    }
+    public void checkAndStartEscape(String srcSN,String srcPath,String dstSN){
+        escapeInitiator.srcRequest(srcSN,srcPath);
+        escapeInitiator.dstRequest(dstSN);
 
+
+
+
+    }
     public static void main(String[] args) {
         DataSampleManager dataSampleManager = DataSampleManager.getInstance();
         dataSampleManager.setLocalOSType(OSType.VMWARE);

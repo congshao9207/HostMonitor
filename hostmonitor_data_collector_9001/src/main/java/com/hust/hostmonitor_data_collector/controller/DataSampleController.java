@@ -96,6 +96,7 @@ public class DataSampleController {
     @PostMapping(value="/dfpTrain",produces = "application/json;charset=UTF-8")
     @ResponseBody
     public String dfpTrain(@RequestBody JSONObject jsonParam){
+        System.out.println("[模型参数]"+jsonParam.toJSONString());
         //服务端身份验证-管理员
         String userID = jsonParam.getString("userID");
         String password = jsonParam.getString("password");

@@ -20,6 +20,7 @@ def save_header(file):
     file.write("\n")
 #写入内容
 def save_data(path):
+    os.makedirs(os.path.dirname(path), exist_ok=True)
     file = open(path, "w")
     save_header(file)
     for i in range(len(lists)):
