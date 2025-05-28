@@ -77,7 +77,10 @@ public class DispersedHostMonitor {
 
             //-----负载统计
             //cpu负载统计
+//            "cpuInfoList":[{"cpuUsage":5.0,"cpuTemperature":64.05002,"cpuName":"11th Gen Intel(R) Core(TM) i5-1155G7 @ 2.50GHz"}]
+
             JSONArray cpuInfoList = hostInfoJson.getJSONArray("cpuInfoList");
+            System.out.println("cpuInfoList1111:"+cpuInfoList);
             for(int i=0;i<cpuInfoList.size();i++){
                 float cpuUsage = cpuInfoList.getJSONObject(i).getFloat("cpuUsage");
                 for(int j=0;j<loadPartition[0].length;j++){

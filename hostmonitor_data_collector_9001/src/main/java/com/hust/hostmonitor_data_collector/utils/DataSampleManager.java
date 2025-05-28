@@ -5,6 +5,7 @@ import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
 import com.csvreader.CsvWriter;
+import com.hust.hostmonitor_data_collector.service.HybridDataCollectorService;
 import com.hust.hostmonitor_data_collector.utils.DiskPredict.DiskPredict;
 import com.hust.hostmonitor_data_collector.utils.SSHConnect.HostConfigData;
 
@@ -32,6 +33,9 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 
 
 import java.nio.charset.Charset;
@@ -41,6 +45,7 @@ import java.util.*;
 
 
 public class DataSampleManager {
+    Logger logger= LoggerFactory.getLogger(DataSampleManager.class);
     private CmdExecutor cmdExecutor;
     //Config配置信息
     private ConfigDataManager configDataManager= ConfigDataManager.getInstance();
@@ -305,14 +310,24 @@ public class DataSampleManager {
 
         }
         else if(osType.equals(OSType.WINDOWS)){
+
             //hostName
             {
                 List<String> cmdResult = cmdExecutor.runCommand("hostname",hostConfigData,false,0);
-                sampleData.put("hostName",cmdResult.get(0));
+                logger.info(String.format("执行获取hostName命令: %s", cmdResult));
+                if (cmdResult != null && !cmdResult.isEmpty()) {
+                    sampleData.put("hostName",cmdResult.get(0));
+                } else {
+                    logger.info(String.format("hostName:没有获取到主机名称, 主机: %s ",hostConfigData.ip));
+                }
+                List<String> updatedCmdResult = ListUtils.safeRemoveFirst(cmdResult, logger, hostConfigData.ip, "没有获取到主机名称");
+
             }
             //osName
             {
                 List<String> cmdResult = cmdExecutor.runCommand("ver",hostConfigData,false,0);
+                logger.info(String.format("执行获取osName命令: %s", cmdResult));
+                logger.info(String.format("cmdResult:%s",cmdResult));
                 if(cmdResult.size()>=2){
                     sampleData.put("osName",cmdResult.get(1));
                 }
@@ -322,8 +337,10 @@ public class DataSampleManager {
                 Map<String,JSONObject> diskInfoMap = new HashMap<>();
                 Map<String,String> logicalDiskMap = new HashMap<>();
                 //物理盘信息：序列号，Model，获取逻辑分区与物理盘的映射
+
                 {
                     List<String> cmdResult = cmdExecutor.runCommand("powershell -command \"Get-Partition | % {New-Object PSObject -Property @{'PartitionNumber'=$_.PartitionNumber; 'DiskNumber'=$_.DiskNumber; 'SerialNumber'=(Get-Disk $_.DiskNumber).SerialNumber; 'DiskModel'=(Get-Disk $_.DiskNumber).Model;'PartitionSize'=$_.Size; 'DriveLetter'=$_.DriveLetter;}}\"",hostConfigData,false,0);
+                    logger.info(String.format("执行获取diskInfo命令: %s", cmdResult));
                     JSONArray diskInfoList = sampleData.getJSONArray("diskInfoList");
                     String serialNumber = "";
                     long partitionSize =0;
@@ -369,13 +386,20 @@ public class DataSampleManager {
                 long allDiskTotalFreeSize =0;
                 {
                     List<String> cmdResult = cmdExecutor.runCommand("wmic logicaldisk get size,freespace,caption",hostConfigData,false,0);
-                    cmdResult.remove(0);
+                    logger.info(String.format("执行获取分区信息命令: %s", cmdResult));
+                    if (cmdResult != null && !cmdResult.isEmpty()) {
+                        cmdResult.remove(0);
+                    } else {
+                        logger.info(String.format("未获取到分区信息: %s", cmdResult));
+                    }
                     for(String rowData:cmdResult){
                         if(!rowData.equals("")){
                             String[] logicalDiskData = rowData.split("\\s+");
                             String caption = logicalDiskData[0];
-                            long freeSpace = Long.parseLong(logicalDiskData[1]);
-                            long size = Long.parseLong(logicalDiskData[2]);
+//                            long freeSpace = Long.parseLong(logicalDiskData[1]);
+//                            long size = Long.parseLong(logicalDiskData[2]);
+                            double freeSpace = SizeUtils.formatSizeToGBOrTB(Long.parseLong(logicalDiskData[1]));
+                            double size = SizeUtils.formatSizeToGBOrTB(Long.parseLong(logicalDiskData[2]));
                             //分区信息
                             JSONObject diskPartition = configDataManager.getSampleFormat("diskPartition");
                             diskPartition.put("driveLetter",caption);
@@ -409,6 +433,7 @@ public class DataSampleManager {
             //cpuInfoList
             {
                 List<String> cmdResult = cmdExecutor.runCommand("powershell -command \"Get-WmiObject Win32_Processor\"",hostConfigData,false,0);
+                logger.info(String.format("执行获取cpuInfoList命令: %s", cmdResult));
                 for(String rowData:cmdResult){
                     if(rowData.startsWith("Name")){
                         JSONObject newCpuInfo = configDataManager.getSampleFormat("cpuInfo");
@@ -421,9 +446,15 @@ public class DataSampleManager {
                 }
             }
             //gpuInfo
+
             {
                 List<String> cmdResult = cmdExecutor.runCommand("wmic PATH Win32_VideoController GET Name,Adapterram",hostConfigData,false,0);
-                cmdResult.remove(0);
+                logger.info(String.format("执行获取gpuInfo命令: %s", cmdResult));
+                if (cmdResult != null && !cmdResult.isEmpty()) {
+                    cmdResult.remove(0);
+                } else {
+                    logger.info(String.format("未获取到gpuInfo信息: %s", cmdResult));
+                }
                 for(String rowData:cmdResult){
                     if(!rowData.equals("")){
                         JSONObject newGpuInfo = configDataManager.getSampleFormat("gpuInfo");
@@ -545,7 +576,7 @@ public class DataSampleManager {
         sampleData.put("lastUpdateTime",new Timestamp(System.currentTimeMillis()));
         sampleData.put("connected",true);
         sampleData.put("hasPersistent",false);
-        System.out.println(sampleData.toJSONString());
+        logger.info("sampleData.toJSONString() {}", sampleData.toJSONString());
         return sampleData;
     }
     private JSONObject getDisk(String devsName,String Model,Long size,boolean isSSD,HostConfigData hostConfigData){
@@ -945,8 +976,8 @@ public class DataSampleManager {
             {
                 {
                     //Cpu Usage
-                    List<String> cmdResult = cmdExecutor.runCommand("wmic cpu get loadpercentage", hostConfigData,false,0);
-                    cmdResult.remove(0);
+                    List<String> CmdResult = cmdExecutor.runCommand("wmic cpu get loadpercentage", hostConfigData,false,0);
+                    List<String> cmdResult = ListUtils.safeRemoveFirst(CmdResult, logger, hostConfigData.ip, "未获取Cpu Usage");
                     int currentIndex = 0;
                     float averageCpuUsage = 0;
                     for (String rowData : cmdResult) {
@@ -962,18 +993,62 @@ public class DataSampleManager {
                 }
                 //Cpu Temperature
                 {
-                    List<String> cmdResult = cmdExecutor.runCommand("wmic /namespace:\\\\root\\wmi PATH MSAcpi_ThermalZoneTemperature get CriticalTripPoint, CurrentTemperature",hostConfigData,false,0);
-                    cmdResult.remove(0);
+                    // 执行 WMIC 命令获取温度信息
+                    List<String> cmdResult = cmdExecutor.runCommand(
+                            "wmic /namespace:\\\\root\\wmi PATH MSAcpi_ThermalZoneTemperature get CriticalTripPoint, CurrentTemperature",
+                            hostConfigData, false, 0);
+
+                    // 移除标题行（第一行）
+                    if (!cmdResult.isEmpty()) {
+                        cmdResult.remove(0);
+                    }
+
                     int currentIndex = 0;
-                    float averageCpuTemperature = 0;
-                    for(String rowData:cmdResult){
-                        if(!rowData.equals("")){
-                            JSONObject cpuInfo = sampleData.getJSONArray("cpuInfoList").getJSONObject(currentIndex);
-                            float currentCpuTemperature = Float.parseFloat(rowData.trim());
-                            cpuInfo.put("cpuTemperature", currentCpuTemperature);
-                            currentIndex += 1;
+                    float totalTemperature = 0;
+                    int count = 0;
+
+                    // 清洗并解析每一行
+                    for (String rowData : cmdResult) {
+                        String trimmedLine = rowData.trim();
+
+                        // 跳过空行、分隔线、无效行
+                        if (trimmedLine.isEmpty() || trimmedLine.contains("--") || trimmedLine.toLowerCase().contains("critical")) {
+                            continue;
+                        }
+
+                        // 按任意空白分割字段（支持多个空格或 Tab）
+                        String[] parts = trimmedLine.split("\\s+");
+
+                        if (parts.length < 2) {
+                            logger.warn("无效行，字段数不足: {}", trimmedLine);
+                            continue;
+                        }
+
+                        try {
+                            // 只取第二列 CurrentTemperature，WMIC 返回的是 0.1°C 单位，需除以 10
+                            float Kelvin = Float.parseFloat(parts[1]) / 10.0f;
+                            logger.info("<Kelvin>: {}", Kelvin);
+                            float currentTemp = Kelvin - 273.15f; // Kelvin -> Celsius
+                            logger.info("<UNK>: {}", currentTemp);
+
+                            // 获取 JSON 数组中的对应 CPU 信息对象
+                            JSONArray cpuInfoList = sampleData.getJSONArray("cpuInfoList");
+                            if (currentIndex < cpuInfoList.size()) {
+                                JSONObject cpuInfo = cpuInfoList.getJSONObject(currentIndex);
+                                cpuInfo.put("cpuTemperature", currentTemp);
+
+                                totalTemperature += currentTemp;
+                                count++;
+                                currentIndex++;
+                            }
+                        } catch (NumberFormatException e) {
+                            logger.error("无法解析温度值: {}", trimmedLine, e);
                         }
                     }
+
+                    // 计算平均温度
+                    float averageCpuTemperature = count > 0 ? totalTemperature / count : 0;
+                    logger.info("Average CPU Temperature: {}°C", averageCpuTemperature);
                 }
             }
             //Net IO
@@ -1022,7 +1097,12 @@ public class DataSampleManager {
                 {
                     List<String> cmdResult = cmdExecutor.runCommand("powershell -command \"Get-WmiObject -query { SELECT * FROM Win32_PerfFormattedData_PerfDisk_LogicalDisk}\"",hostConfigData,false,0);
                     for(int i=0;i<2;i++){
-                        cmdResult.remove(0);
+//                        cmdResult.remove(0);
+                        if (cmdResult != null && !cmdResult.isEmpty()) {
+                            cmdResult.remove(0);
+                        } else {
+                            logger.info("未获分区的IO详情: {}/IP {}", cmdResult, hostConfigData.ip);
+                        }
                     }
 
                     String partitionName = "";
@@ -1516,8 +1596,8 @@ public class DataSampleManager {
                 String getDiskListCmd = "";
                 if(osType.equals(OSType.WINDOWS)){
                     getDiskListCmd = "wmic logicaldisk get deviceid";
-                    List<String> cmdResult = cmdExecutor.runCommand(getDiskListCmd,hostConfigData,false,0);
-                    cmdResult.remove(0);
+                    List<String> CmdResult = cmdExecutor.runCommand(getDiskListCmd,hostConfigData,false,0);
+                    List<String> cmdResult = ListUtils.safeRemoveFirst(CmdResult, logger, hostConfigData.ip, "未获取硬盘名");
                     for(String currentStr:cmdResult){
                         if(!currentStr.equals("")){
                             diskList.add(currentStr.trim());
@@ -1568,23 +1648,46 @@ public class DataSampleManager {
                 JSONObject currentDiskData = new JSONObject();
                 {
                     //TODO、opt
-                    List<String> cmdResult = cmdExecutor.runCommand(smartDiskInfoCmd + currentDiskName+postfix,hostConfigData,true,0);
-                    if(cmdResult.get(3).contains("Unable to")){
+                    String fullCmd = smartDiskInfoCmd + currentDiskName + postfix;
+                    List<String> cmdResult = cmdExecutor.runCommand(fullCmd, hostConfigData, true, 0);
+
+                    // 打印日志时使用占位符
+                    logger.info("SMART Disk Info Output: {}", cmdResult);
+                    // 安全判断：是否包含错误信息
+                    boolean hasError = cmdResult.stream().anyMatch(line -> line.contains("Unable to"));
+                    if (hasError) {
+                        logger.warn("无法获取磁盘 {} 的 SMART 信息", currentDiskName);
                         continue;
                     }
-                    for (int i = 0; i < 4; i++) {
-                        cmdResult.remove(0);
-                    }
-                    cmdResult.remove(cmdResult.size() - 1);
-                    for(String currentOutput: cmdResult){
-                        String[] rawData = currentOutput.split(":\\s+");
-                        if(rawData.length!=2){
-                            continue;
+                    List<String> filteredLines = new ArrayList<>();
+                    for (String line : cmdResult) {
+                        if (line == null) continue;
+
+                        String trimmedLine = line.trim();
+                        if (trimmedLine.isEmpty()) continue;
+                        if (trimmedLine.startsWith("smartctl ")) continue;
+                        if (trimmedLine.startsWith("Copyright")) continue;
+                        if (trimmedLine.matches("-+")) continue;
+
+                        filteredLines.add(trimmedLine);
+                    };
+//                    for (int i = 0; i < 4; i++) {
+//                        cmdResult.remove(0);
+//                    }
+                    // 解析每一行数据
+                    for (String line : filteredLines) {
+                        String[] parts = line.split(":\\s*", 2); // 最多分成两部分
+                        if (parts.length == 2) {
+                            String key = parts[0].trim();
+                            String value = parts[1].trim();
+
+                            // 跳过 CD/DVD 设备
+                            if ("Device type".equals(key) && "CD/DVD".equals(value)) {
+                                break; // 或者 continue，根据业务逻辑决定
+                            }
+
+                            currentDiskData.put(key, value);
                         }
-                        if(rawData[0].equals("Device type")&&rawData[1].equals("CD/DVD")){
-                            continue;
-                        }
-                        currentDiskData.put(rawData[0],rawData[1]);
                     }
                 }
 

@@ -14,7 +14,7 @@ import json
 if __name__ == '__main__':
     # try:
     # except 
-    print('json:', sys.argv[1])
+    print('json:', sys.argv[1], type(sys.argv[1]))
     param = json.loads(str(sys.argv[1]))
     print('param:', param)
     param_1 = param['param_1']
@@ -25,5 +25,5 @@ if __name__ == '__main__':
     i = int(param_1)
     while i:
         print('\rprocessing:', i, end='')
-        i = i - 1
+        i -= 1
         time.sleep(1)

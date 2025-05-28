@@ -2,7 +2,7 @@ server:
   port: 9001
 spring:
   profiles:
-      active: test
+      active: dev
       # 数据库表结构以笔记本达梦数据库为准
       # dev 阿里云mysql数据库 配置文件改 0 贵州农商行
       # test 本地达梦数据库 配置文件改 1

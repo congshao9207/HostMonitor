@@ -95,17 +95,19 @@ function FInitNav(){
     var NavItems = FGetNavItems();
     var mainInfo = FGetMainInfo();
     var hostIpList = mainInfo["hostIp"];
-
     for(var i=0;i<NavItems.length;i++){
         NavItems[i].innerHTML = innerHTMLList[i];
         const index = i;
         NavItems[i].onclick = function (){
+
             if(index === 4 || index === 5 || index === 6){
                 var user = FGetUser();
+
                 if(user == null){
                     window.location.href = signInSrc;
                 }
                 else{
+                    console.log(minRequireUserType[index], user["userType"], 1111)
                     if(minRequireUserType[index] <= user["userType"]){
                         FSetCurrentNavItem(index);
                     }

@@ -1,5 +1,6 @@
 package com.hust.hostmonitor_data_collector.utils.SSHConnect;
 
+import com.hust.hostmonitor_data_collector.utils.DataSampleManager;
 import com.jcraft.jsch.*;
 
 import java.io.BufferedReader;
@@ -9,12 +10,15 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * SSHManager 的 Jsch实现方式
  * 与Ethz相比具有更强的稳定性
  */
 public class JschSSHManager implements SSHManager {
+    Logger logger= LoggerFactory.getLogger(DataSampleManager.class);
     //JSCH
     JSch mainJSCH;
     //JSCH ssh Session List
@@ -42,6 +46,7 @@ public class JschSSHManager implements SSHManager {
                 currentSession.setConfig(config);
 
                 //设置代理
+                logger.info(String.format("Connect to host %s successful", hostConfigInfo.hasProxy()));
                 if(hostConfigInfo.hasProxy()){
                     ProxyHTTP proxyHTTP = new ProxyHTTP(hostConfigInfo.proxyConfigData.proxyIp,hostConfigInfo.proxyConfigData.proxyPort);
                     currentSession.setProxy(proxyHTTP);
@@ -51,8 +56,8 @@ public class JschSSHManager implements SSHManager {
                 sessionMap.put(hostConfigInfo.ip,currentSession);
             }
         } catch (Exception e) {
-            //e.printStackTrace();
-            System.out.println("        JschSSHManager->getJSCHSession,Error, IP:"+ hostConfigInfo.ip);
+//            e.printStackTrace();
+            System.out.println("JschSSHManager->getJSCHSession,Error, IP:"+ hostConfigInfo.ip);
             currentSession = null;
 
         }

@@ -7,6 +7,8 @@ import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.List;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.hust.hostmonitor_data_collector.utils.SSHConnect.JschSSHManager;
 import com.hust.hostmonitor_data_collector.utils.SSHConnect.SSHManager;
@@ -50,6 +52,7 @@ class CmdLocalExecutor{
 
 //执行Cmd指令
 public class CmdExecutor {
+    Logger logger= LoggerFactory.getLogger(DataSampleManager.class);
     //ssh连接管理
     private SSHManager sshManager;
     public CmdExecutor(){
@@ -64,6 +67,7 @@ public class CmdExecutor {
         }
         else{
             //远程执行
+            logger.info(String.format("cmd: %s", isSudo));
             List<String> cmdResult = sshManager.runCommand(cmd,hostConfigData,isSudo,waitTime);
             return cmdResult;
         }

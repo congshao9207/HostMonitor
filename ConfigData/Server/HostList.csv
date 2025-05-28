@@ -1,5 +1,2 @@
 ip,userName,password,proxyId,OSType,router
-42.192.139.228,akane,woaimoriya,0,linux,127.0.0.2
-127.0.0.1,root,123456,0,linux,127.0.0.2
-192.168.0.10,zzy,123,1,linux,222.20.95.235
-192.168.0.11,qwj,123,1,linux,222.20.95.235
+192.168.1.109,123,123,0,windows,192.168.1.1

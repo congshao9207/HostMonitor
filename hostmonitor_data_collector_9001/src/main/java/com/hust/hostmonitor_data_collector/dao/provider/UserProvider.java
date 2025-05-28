@@ -15,13 +15,16 @@ public class UserProvider {
             SQL = "set @new_id=0;\n " +
                     "call p_getId(@new_id);\n " +
                     "set @date=now();\n " +
-                    "INSERT INTO UserTable values(@new_id,#{user_name},#{user_password},0,0,@date,'','',0,0);\n " +
+                    "INSERT INTO UserTable (UserID, UserName, Password, UserType, ValidState, LastEditTime, Phone, Email, PhoneValidState, EmailValidState) " +
+                    "VALUES (@new_id, #{user_name}, #{user_password}, 0, 0, @date, '', '', 0, 0);\n " +
                     "select @new_id; ";
         }
         else if(dataSourceSelect==1) {
             Integer newID = DamengIDSeed++;
-            SQL = "INSERT INTO storagedevicemonitor.UserTable values('" + (newID.toString()) + "',#{user_name},#{user_password},0,0,#{timestamp},'','',0,0);\n " +
+            SQL = "INSERT INTO UserTable (UserID, UserName, Password, UserType, ValidState, LastEditTime, Phone, Email, PhoneValidState, EmailValidState) " +
+                    "VALUES ('" + (newID.toString()) + "', #{user_name}, #{user_password}, 0, 0, @date, '', '', 0, 0);\n " +
                     "select USERID from storagedevicemonitor.UserTable where USERID='" + newID + "'; ";
+
 
         }
         return SQL;
